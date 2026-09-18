@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Label Truth</title>
+<meta name="description" content="Scan a food barcode or snap the ingredients. Get plain English, and what the FDA allows in it.">
+<meta name="theme-color" content="#14532d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1c1f1d; --muted:#5e6661; --line:#e2e0d8;
+  --brand:#14532d; --brand-ink:#ffffff; --accent:#b45309; --focus:#2563eb;
+  --warn-bg:#fff7ed; --warn-ink:#7c2d12;
+  --t-bug:#b45309; --t-animal:#9f1239; --t-maybe:#c2410c; --t-msg:#7e22ce; --t-sugar:#be185d;
+  --t-sweet:#0f766e; --t-dye:#dc2626; --t-petro:#475569; --t-pres:#1d4ed8; --t-hidden:#a16207; --t-banned:#7f1d1d;
+  --radius:14px; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#101312; --card:#181c1a; --ink:#e8ebe9; --muted:#9aa39e; --line:#2a302d;
+    --brand:#22c55e; --brand-ink:#06260f; --accent:#f59e0b; --warn-bg:#2a1a0e; --warn-ink:#fed7aa;
+    --t-bug:#f59e0b; --t-animal:#fb7185; --t-maybe:#fb923c; --t-msg:#c084fc; --t-sugar:#f472b6;
+    --t-sweet:#2dd4bf; --t-dye:#f87171; --t-petro:#94a3b8; --t-pres:#60a5fa; --t-hidden:#facc15; --t-banned:#fca5a5;
+    --shadow:none;}
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:0 16px calc(24px + env(safe-area-inset-bottom))}
+main{max-width:640px;margin:0 auto}
+header{max-width:640px;margin:0 auto;padding:18px 0 8px;display:flex;align-items:center;gap:10px}
+header h1{font-size:22px;margin:0;letter-spacing:-.01em}
+header .sub{color:var(--muted);font-size:14px;margin:0}
+header img{width:36px;height:36px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin:12px 0}
+.card h2{font-size:18px;margin:0 0 8px}
+.card h3{font-size:15px;margin:14px 0 6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button,.btn{appearance:none;border:0;border-radius:12px;padding:14px 12px;font:600 15px/1.2 inherit;cursor:pointer;
+  background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;text-align:center}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.small{min-height:36px;padding:8px 12px;font-size:14px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+input,textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:12px;font:16px inherit}
+textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:8px;align-items:center}
+.row input{flex:1}
+.muted{color:var(--muted)} .tiny{font-size:13px}
+#reader{width:100%;border-radius:12px;overflow:hidden;background:#000;margin-top:10px}
+.hidden{display:none!important}
+.status{padding:10px 12px;border-radius:10px;background:var(--warn-bg);color:var(--warn-ink);font-size:14px;margin-top:10px}
+.product{display:flex;gap:12px;align-items:center}
+.product img{width:72px;height:72px;object-fit:contain;border-radius:10px;background:#fff;border:1px solid var(--line)}
+.product .name{font-weight:700;font-size:18px;line-height:1.25}
+.summary{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600;border:1px solid currentColor;background:transparent}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.t-bug{color:var(--t-bug)} .t-animal{color:var(--t-animal)} .t-maybe-animal{color:var(--t-maybe)} .t-msg{color:var(--t-msg)}
+.t-sugar{color:var(--t-sugar)} .t-sweetener{color:var(--t-sweet)} .t-dye{color:var(--t-dye)} .t-petro{color:var(--t-petro)}
+.t-pres{color:var(--t-pres)} .t-hidden{color:var(--t-hidden)} .t-banned{color:var(--t-banned)}
+.ingr-raw{font-size:14px;color:var(--muted);line-height:1.6}
+.ingr-raw mark{background:transparent;color:var(--ink);font-weight:700;border-bottom:2px solid var(--accent)}
+details.term{border-top:1px solid var(--line);padding:10px 0}
+details.term:first-of-type{border-top:0}
+details.term summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+details.term summary::-webkit-details-marker{display:none}
+details.term summary .word{font-weight:700}
+details.term summary .plain{display:block;font-weight:400;color:var(--muted);font-size:14px}
+details.term summary .tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;flex-shrink:0;max-width:45%}
+details.term .body{font-size:14px;margin-top:8px}
+details.term .body p{margin:4px 0}
+.heads{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:8px 10px;margin-top:6px}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;border:1px solid currentColor;border-radius:6px;padding:1px 6px;white-space:nowrap}
+.defect{border-top:1px solid var(--line);padding:12px 0}
+.defect:first-of-type{border-top:0;padding-top:4px}
+.defect .dname{font-weight:700}
+.defect ul{margin:6px 0 0;padding-left:18px}
+.defect li{margin:3px 0}
+.serv{font-weight:700;color:var(--accent)}
+.unknown{font-size:13px;color:var(--muted)}
+.hist a{color:var(--ink);text-decoration:none;display:block;padding:8px 0;border-top:1px solid var(--line)}
+.hist a:first-child{border-top:0}
+.spin{width:18px;height:18px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+footer{max-width:640px;margin:18px auto 0;color:var(--muted);font-size:12px;text-align:center}
+footer a{color:inherit}
+@media (max-width:380px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <img src="icon.svg" alt="">
+  <div><h1>Label Truth</h1><p class="sub">What's really in it, in plain English</p></div>
+</header>
+<main>
+  <section class="card" id="start">
+    <div class="grid">
+      <button id="btnScan">📷 Scan barcode</button>
+      <button id="btnPhoto">🧾 Photo of ingredients</button>
+    </div>
+    <input type="file" id="fileBarcode" accept="image/*" capture="environment" class="hidden">
+    <input type="file" id="fileLabel" accept="image/*" capture="environment" class="hidden">
+    <div id="scanWrap" class="hidden">
+      <div id="reader"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="alt small" id="btnStop">Stop camera</button>
+        <button class="alt small" id="btnBarcodePhoto">Use a photo of the barcode instead</button>
+      </div>
+    </div>
+    <h3>Or type it in</h3>
+    <div class="row">
+      <input id="barcode" inputmode="numeric" placeholder="Barcode number (UPC)" autocomplete="off">
+      <button class="small" id="btnLookup">Look up</button>
+    </div>
+    <details style="margin-top:10px">
+      <summary class="muted tiny">Paste an ingredient list instead</summary>
+      <textarea id="pasteText" placeholder="INGREDIENTS: Enriched flour (wheat flour, niacin, reduced iron…), sugar, …" style="margin-top:8px"></textarea>
+      <button class="small" id="btnDecode" style="margin-top:8px">Decode ingredients</button>
+    </details>
+    <div id="status" class="status hidden" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="results" class="hidden"></section>
+
+  <section class="card">
+    <h2>Look up any label word</h2>
+    <input id="search" placeholder="e.g. carmine, maltodextrin, natural flavor" autocomplete="off">
+    <div id="searchOut"></div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary><strong>Is there human DNA in food? What does the FDA allow?</strong></summary>
+      <div class="tiny" style="margin-top:8px">
+        <p><strong>Short answer:</strong> The FDA has <em>no</em> allowed amount of human DNA or human hair in food. Its <em>Food Defect Levels Handbook</em> lists allowed amounts of bug pieces, rodent hairs, mold, fly eggs, maggots, mites, animal poop ("mammalian excreta") and grit. Nothing human is on the list.</p>
+        <p><strong>Where the "human DNA" idea comes from:</strong> In 2015 a company called Clear Food tested 345 hot dogs and sausages and reported human DNA in 2% of them (6 samples), 4 of which were vegetarian. They said it most likely came from hair, skin, fingernails or saliva during manufacturing. It was a company report, not a peer-reviewed study, and it was never repeated at scale.</p>
+        <p><strong>The real "human" ingredient:</strong> <em>L-cysteine</em>, a dough softener in some breads, bagels and pizza crusts, has historically been made from human hair (mostly in China), and also from duck feathers and hog hair. Today some is made by fermentation. The label never says which. This app flags it.</p>
+        <p><strong>What "allowed" means:</strong> Defect levels are the point where the FDA <em>takes legal action</em>. Most food has far less. The FDA says these natural defects are unavoidable and "pose no inherent hazard to health," and that companies can't blend bad batches with good ones to get under the limit.</p>
+        <p><a href="https://www.fda.gov/food/current-good-manufacturing-practices-cgmps-food-and-dietary-supplements/food-defect-levels-handbook" target="_blank" rel="noopener">FDA Food Defect Levels Handbook</a></p>
+      </div>
+    </details>
+  </section>
+
+  <section class="card hist" id="histCard">
+    <h2>Recent</h2>
+    <div id="hist" class="tiny muted">Nothing scanned yet.</div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary><strong>Settings & sharing</strong></summary>
+      <div class="tiny" style="margin-top:10px">
+        <p><strong>USDA API key</strong> (optional). This is the backup lookup when Open Food Facts doesn't have a product. Without a key it uses the shared demo key (about 30 lookups/hour). Get a free key at <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov</a>.</p>
+        <div class="row"><input id="usdaKey" placeholder="Paste USDA key" autocomplete="off"><button class="small" id="btnSaveKey">Save</button></div>
+        <div class="row" style="margin-top:10px">
+          <button class="alt small" id="btnShare">Share this app</button>
+          <button class="alt small" id="btnClear">Clear recent</button>
+        </div>
+      </div>
+    </details>
+  </section>
+</main>
+<footer>
+  Product data: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> (ODbL) and <a href="https://fdc.nal.usda.gov" target="_blank" rel="noopener">USDA FoodData Central</a>. Defect levels: FDA. Plain-English notes are a guide, not medical advice. Check the actual package, since recipes change.
+</footer>
+<div id="hiddenReader" class="hidden"></div>
+<script src="data/glossary.js"></script>
+<script src="data/defects.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
