@@ -7,9 +7,9 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const TAG_LABEL = {
   "bug":"From bugs","animal":"From animals","maybe-animal":"May be animal","msg":"MSG-like",
   "sugar":"Sugar","sweetener":"Sweetener","dye":"Color","petro":"Petroleum-based",
-  "pres":"Preservative","hidden":"Hidden meaning","banned":"Banned or restricted"
+  "pres":"Preservative","hidden":"Hidden meaning","banned":"Banned/restricted abroad","warning":"Warning label abroad","phaseout":"Being phased out in U.S."
 };
-const TAG_ORDER = ["bug","animal","maybe-animal","msg","banned","dye","petro","sugar","sweetener","pres","hidden"];
+const TAG_ORDER = ["bug","animal","maybe-animal","msg","banned","warning","phaseout","dye","petro","sugar","sweetener","pres","hidden"];
 const SCRIPTS = {
   scanner: "vendor/html5-qrcode.min.js",
   ocr: "vendor/tesseract.min.js"
@@ -126,6 +126,7 @@ function termHTML(entry, hits){
       <p><strong>Made from:</strong> ${esc(entry.f)}</p>
       <p><strong>Why it's in there:</strong> ${esc(entry.w)}</p>
       ${entry.x ? `<p class="heads"><strong>Heads up:</strong> ${esc(entry.x)}</p>` : ""}
+      ${(window.FOREIGN || {})[entry.n] ? `<p style="margin-top:8px"><strong>Other countries:</strong></p>${foreignRules(entry.n, true)}` : ""}
     </div></details>`;
 }
 
@@ -152,6 +153,35 @@ function defectHTML(d, servingG, productLevel){
   return `<div class="defect"><div class="dname">${esc(d.name)}${productLevel ? "" : ' <span class="muted tiny">(an ingredient in this product)</span>'}</div><ul>${lines}</ul></div>`;
 }
 
+
+const LEVEL = { banned:["Banned","lvl-banned"], restricted:["Restricted","lvl-restricted"], limit:["Strict limit","lvl-restricted"], warning:["Warning label","lvl-warning"] };
+function foreignRules(name, compact){
+  const f = (window.FOREIGN || {})[name];
+  if (!f) return "";
+  const rows = f.rules.map(r => {
+    const [lbl, cls] = LEVEL[r.level] || [r.level, ""];
+    return `<li><span class="lvl ${cls}">${esc(lbl)}</span> <strong>${esc(r.where)}</strong>${r.since ? ` <span class="muted">(${r.since >= "2026" ? "starting " : "since "}${esc(r.since)})</span>` : ""}${r.note && !compact ? `<br><span class="tiny">${esc(r.note)}</span>` : ""}</li>`;
+  }).join("");
+  const us = f.us ? `<p class="tiny"><strong>In the U.S.:</strong> ${esc(f.us)}</p>` : "";
+  const ok = f.allowed ? `<p class="tiny"><strong>Still allowed in:</strong> ${esc(f.allowed)}</p>` : "";
+  const src = f.src && !compact ? `<p class="tiny muted">Sources: ${f.src.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(" · ")}</p>` : "";
+  return `<ul class="rules">${rows}</ul>${us}${ok}${src}`;
+}
+function foreignCard(found){
+  const hits = found.filter(f => (window.FOREIGN || {})[f.entry.n]);
+  const tracked = Object.keys(window.FOREIGN || {}).length;
+  if (!hits.length) return `<div class="card"><h2>Banned or restricted in other countries</h2>
+    <p class="tiny muted">Nothing in this product is on our list of ${tracked} additives that other countries ban, restrict, or require warning labels for.</p></div>`;
+  const rank = f => { const L = (window.FOREIGN[f.entry.n].rules || []).map(r => r.level); return L.includes("banned") ? 0 : L.includes("restricted") || L.includes("limit") ? 1 : 2; };
+  hits.sort((a, b) => rank(a) - rank(b));
+  const nBan = hits.filter(h => rank(h) < 2).length, nWarn = hits.length - nBan;
+  const head = [nBan ? `${nBan} ingredient${nBan > 1 ? "s" : ""} banned or restricted somewhere else` : "", nWarn ? `${nWarn} that need${nWarn > 1 ? "" : "s"} a warning label in Europe` : ""].filter(Boolean).join(" · ");
+  return `<div class="card foreign"><h2>Banned or restricted in other countries</h2>
+    <p class="tiny"><strong>${esc(head)}.</strong> The product itself isn't banned anywhere; countries ban ingredients. This is what the same recipe would run into overseas.</p>
+    ${hits.map(h => `<div class="defect"><div class="dname">${esc(h.entry.n)} <span class="muted tiny">(label says: ${esc([...h.hits].join(", "))})</span></div>${foreignRules(h.entry.n)}</div>`).join("")}
+  </div>`;
+}
+
 function renderResults({ product, source, text }){
   const r = decode(text, product.additives_tags);
   const counts = {};
@@ -175,6 +205,7 @@ function renderResults({ product, source, text }){
     </div>
     <div class="summary">${(productHits.length || ingrHits.length) ? `<span class="pill t-bug"><span class="dot"></span>FDA bug/hair/mold limits apply</span>` : ""}${pills || '<span class="muted tiny">Nothing in our dictionary was flagged.</span>'}</div>
   </div>
+  ${foreignCard(r.found)}
   <div class="card">
     <h2>What the FDA allows in it</h2>
     ${productHits.length || ingrHits.length ? `
